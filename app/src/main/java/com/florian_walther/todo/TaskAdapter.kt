@@ -8,9 +8,38 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.florian_walther.todo.databinding.ItemTaskBinding
 
-class TaskAdapter: ListAdapter<Task, TaskAdapter.ViewHolder>(DiffCallback()) {
+class TaskAdapter(
+    private val listener: OnItemClickListener
+    ): ListAdapter<Task, TaskAdapter.ViewHolder>(DiffCallback()) {
 
-    class ViewHolder(private val binding: ItemTaskBinding): RecyclerView.ViewHolder(binding.root) {
+    inner class ViewHolder(private val binding: ItemTaskBinding): RecyclerView.ViewHolder(binding.root) {
+
+        // set up the OnClickListener's here because init block is called only when a ViewHolder is
+        // constructed, and a RecyclerView only creates a number of ViewHolder's.
+        // whereas if you set up the OnClickListener's in onBindViewHolder(), which is called every
+        // time a new item is scrolled into the screen, which can be tons of calls
+        init {
+            binding.apply {
+                // when user clicks anywhere on the whole task item
+                root.setOnClickListener {
+                    val position = adapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        val item = getItem(position)
+                        listener.onItemClick(item)
+                    }
+                }
+
+                // when user clicks only on the checkbox
+                cbCompleted.setOnClickListener {
+                    val position = adapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        val item = getItem(position)
+                        listener.onCheckBoxClick(item, cbCompleted.isChecked)
+                    }
+                }
+            }
+        }
+
         fun bind(task: Task) {
             binding.apply {
                 cbCompleted.isChecked = task.is_completed
@@ -19,6 +48,11 @@ class TaskAdapter: ListAdapter<Task, TaskAdapter.ViewHolder>(DiffCallback()) {
                 ivPriority.isVisible = task.is_important
             }
         }
+    }
+
+    interface OnItemClickListener {
+        fun onItemClick(task: Task)
+        fun onCheckBoxClick(task: Task, isChecked: Boolean)
     }
 
     class DiffCallback: DiffUtil.ItemCallback<Task>() {

@@ -60,4 +60,12 @@ class TaskViewModel @ViewModelInject constructor(
     fun onHideCompletedClicked(hideCompleted: Boolean) = viewModelScope.launch {
         preferences.updateHideCompleted(hideCompleted)
     }
+
+    fun onTaskSelected(task: Task) {
+    }
+
+    fun onTaskCheckedChanged(task: Task, isChecked: Boolean) = viewModelScope.launch {
+        val copy = task.copy(is_completed=isChecked)
+        taskDao.update(copy)
+    }
 }

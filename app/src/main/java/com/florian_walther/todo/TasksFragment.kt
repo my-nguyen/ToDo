@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class TasksFragment: Fragment(R.layout.fragment_tasks) {
+class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickListener {
     private val viewModel: TaskViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -24,7 +24,7 @@ class TasksFragment: Fragment(R.layout.fragment_tasks) {
 
         setHasOptionsMenu(true)
 
-        val taskAdapter = TaskAdapter()
+        val taskAdapter = TaskAdapter(this)
         val binding = FragmentTasksBinding.bind(view)
         binding.apply {
             rvTasks.apply {
@@ -37,6 +37,16 @@ class TasksFragment: Fragment(R.layout.fragment_tasks) {
         viewModel.tasks.observe(viewLifecycleOwner) { tasks ->
             taskAdapter.submitList(tasks)
         }
+    }
+
+    // in the following 2 onClick methods, we delegate the logic to ViewModel instead of implementing
+    // it here.
+    override fun onItemClick(task: Task) {
+        viewModel.onTaskSelected(task)
+    }
+
+    override fun onCheckBoxClick(task: Task, isChecked: Boolean) {
+        viewModel.onTaskCheckedChanged(task, isChecked)
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
