@@ -13,10 +13,10 @@ class TaskAdapter: ListAdapter<Task, TaskAdapter.ViewHolder>(DiffCallback()) {
     class ViewHolder(private val binding: ItemTaskBinding): RecyclerView.ViewHolder(binding.root) {
         fun bind(task: Task) {
             binding.apply {
-                cbCompleted.isChecked = task.isCompleted
+                cbCompleted.isChecked = task.is_completed
                 tvName.text = task.name
-                tvName.paint.isStrikeThruText = task.isCompleted
-                ivPriority.isVisible = task.isImportant
+                tvName.paint.isStrikeThruText = task.is_completed
+                ivPriority.isVisible = task.is_important
             }
         }
     }
