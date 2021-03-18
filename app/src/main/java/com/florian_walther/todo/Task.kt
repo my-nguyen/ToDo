@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 import kotlinx.android.parcel.Parcelize
 import java.text.DateFormat
 
-@Entity
+@Entity(tableName="tasks")
 @Parcelize
 data class Task(val name: String, val isImportant: Boolean=false, val isCompleted: Boolean=false,
                 val date: Long=System.currentTimeMillis(), @PrimaryKey(autoGenerate=true) val id: Int=0
