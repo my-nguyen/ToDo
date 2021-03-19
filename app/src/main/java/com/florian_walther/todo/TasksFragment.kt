@@ -9,6 +9,7 @@ import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -52,6 +53,10 @@ class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickL
                     viewModel.onTaskSwiped(task)
                 }
             }).attachToRecyclerView(rvTasks)
+
+            fabAddTask.setOnClickListener {
+                viewModel.onAddTaskClick()
+            }
         }
 
         viewModel.tasks.observe(viewLifecycleOwner) { tasks ->
@@ -70,7 +75,20 @@ class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickL
                                 viewModel.onUndoClick(event.task)
                             }.show()
                     }
-                }
+                    is TaskViewModel.TaskEvent.NavigateToAdd -> {
+                        // must re-build for compile to generate navigation methods
+                        val action = TasksFragmentDirections.actionTasksFragmentToEditFragment(null, "New Task")
+                        findNavController().navigate(action)
+                        // the above could be written as below but if the destination Fragment
+                        // expects an argument as above, then the above would cause a compile error
+                        // whereas the below would not.
+                        // findNavController().navigate(R.id.tasksFragment)
+                    }
+                    is TaskViewModel.TaskEvent.NavigateToEdit -> {
+                        val action = TasksFragmentDirections.actionTasksFragmentToEditFragment(event.task, "Edit Task")
+                        findNavController().navigate(action)
+                    }
+                }.exhaustive
             }
         }
     }

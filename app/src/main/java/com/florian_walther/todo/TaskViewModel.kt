@@ -1,11 +1,9 @@
 package com.florian_walther.todo
 
+import androidx.hilt.Assisted
 import androidx.hilt.lifecycle.ViewModelInject
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -13,10 +11,15 @@ import kotlinx.coroutines.launch
 
 class TaskViewModel @ViewModelInject constructor(
     private val taskDao: TaskDao,
-    private val preferences: PreferenceRepository
+    private val preferences: PreferenceRepository,
+    @Assisted private val state: SavedStateHandle
 ) : ViewModel() {
     // query to be updated in TasksFragment.onCreateOptionsMenu()
-    val query = MutableStateFlow("")
+    // val query = MutableStateFlow("")
+
+    // can't store a Flow in a SavedStateHandle; rather must save it as a LiveData which can be
+    // converted to a Flow
+    val query = state.getLiveData("query", "")
 
     /// when flatMapLatest receives 1 single flow (query)
     // query is a flow, and flatMapLatest is a flow operator. whenever the value of the query flow
@@ -42,7 +45,7 @@ class TaskViewModel @ViewModelInject constructor(
 
     /// when flatMapLatest receives 2 flows (query, preferencesFlow)
     val preferencesFlow = preferences.preferencesFlow
-    private val taskFlow = combine(query, preferencesFlow) { query, preferencesFlow ->
+    private val taskFlow = combine(query.asFlow(), preferencesFlow) { query, preferencesFlow ->
         // Pair is used to pack the 2 flows into 1 single argument to pass into flatMapLatest
         Pair(query, preferencesFlow)
     }.flatMapLatest { (query, preferencesFlow) ->
@@ -67,7 +70,9 @@ class TaskViewModel @ViewModelInject constructor(
         preferences.updateHideCompleted(hideCompleted)
     }
 
-    fun onTaskSelected(task: Task) {
+    fun onTaskSelected(task: Task) = viewModelScope.launch {
+        // emit events to Fragment via a channel
+        taskChannel.send(TaskEvent.NavigateToEdit(task))
     }
 
     fun onTaskCheckedChanged(task: Task, isChecked: Boolean) = viewModelScope.launch {
@@ -81,7 +86,7 @@ class TaskViewModel @ViewModelInject constructor(
         // Snackbar is tricky: the ViewModel contains logic of when to show a Snackbar, and the
         // Fragment has all the ingredients necessary to show the Snackbar, but the ViewModel
         // doesn't maintain a reference to the Fragment
-        // solution: use a Kotlin channel
+        // solution: emit events from ViewModel to Fragment via a channel
         val element = TaskEvent.ShowUndoMessage(task)
         taskChannel.send(element)
     }
@@ -91,7 +96,14 @@ class TaskViewModel @ViewModelInject constructor(
         taskDao.insert(task)
     }
 
+    fun onAddTaskClick() = viewModelScope.launch {
+        // emit events to Fragment via a channel
+        taskChannel.send(TaskEvent.NavigateToAdd)
+    }
+
     sealed class TaskEvent {
+        object NavigateToAdd : TaskEvent()
+        data class NavigateToEdit(val task: Task): TaskEvent()
         data class ShowUndoMessage(val task: Task): TaskEvent()
     }
 }
