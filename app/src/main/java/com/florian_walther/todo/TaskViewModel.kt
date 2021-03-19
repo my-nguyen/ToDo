@@ -4,9 +4,11 @@ import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 class TaskViewModel @ViewModelInject constructor(
@@ -51,6 +53,10 @@ class TaskViewModel @ViewModelInject constructor(
     // the query result taskFlow is observed as a LiveData
     val tasks = taskFlow.asLiveData()
 
+    private val taskChannel = Channel<TaskEvent>()
+    // to avoid exposing taskChannel, turn taskChannel into a flow so Fragment can receive from taskChannel
+    val taskEvent = taskChannel.receiveAsFlow()
+
     // this viewModelScope is alive as long as ViewModel is alive
     // as opposed to ApplicationScope is alive as long as the application is alive
     fun onSortOrderSelected(sortOrder: SortOrder) = viewModelScope.launch {
@@ -67,5 +73,25 @@ class TaskViewModel @ViewModelInject constructor(
     fun onTaskCheckedChanged(task: Task, isChecked: Boolean) = viewModelScope.launch {
         val copy = task.copy(is_completed=isChecked)
         taskDao.update(copy)
+    }
+
+    fun onTaskSwiped(task: Task) = viewModelScope.launch {
+        taskDao.delete(task)
+
+        // Snackbar is tricky: the ViewModel contains logic of when to show a Snackbar, and the
+        // Fragment has all the ingredients necessary to show the Snackbar, but the ViewModel
+        // doesn't maintain a reference to the Fragment
+        // solution: use a Kotlin channel
+        val element = TaskEvent.ShowUndoMessage(task)
+        taskChannel.send(element)
+    }
+
+    fun onUndoClick(task: Task) = viewModelScope.launch {
+        // undo: insert task back into database
+        taskDao.insert(task)
+    }
+
+    sealed class TaskEvent {
+        data class ShowUndoMessage(val task: Task): TaskEvent()
     }
 }

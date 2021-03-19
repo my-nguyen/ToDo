@@ -9,9 +9,13 @@ import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.florian_walther.todo.databinding.FragmentTasksBinding
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -32,10 +36,42 @@ class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickL
                 layoutManager = LinearLayoutManager(requireContext())
                 setHasFixedSize(true)
             }
+
+            val swipeDirections = ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+            ItemTouchHelper(object: ItemTouchHelper.SimpleCallback(0, swipeDirections) {
+                // onMove is motion up and down, not what we want
+                override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder,
+                                    target: RecyclerView.ViewHolder): Boolean {
+                    return false
+                }
+
+                // remove a task when user swipes left or right
+                override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                    val position = viewHolder.adapterPosition
+                    val task = taskAdapter.currentList[position]
+                    viewModel.onTaskSwiped(task)
+                }
+            }).attachToRecyclerView(rvTasks)
         }
 
         viewModel.tasks.observe(viewLifecycleOwner) { tasks ->
             taskAdapter.submitList(tasks)
+        }
+
+        // launchWhenStarted() prevents Fragment from showing the Snackbar when Fragment is obscured
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            // listen for event from channel
+            viewModel.taskEvent.collect { event ->
+                when (event) {
+                    is TaskViewModel.TaskEvent.ShowUndoMessage -> {
+                        Snackbar.make(requireView(), "Task deleted", Snackbar.LENGTH_LONG)
+                            .setAction("UNDO") {
+                                // Fragment is dumb so it delegates the undo logic back to ViewModel
+                                viewModel.onUndoClick(event.task)
+                            }.show()
+                    }
+                }
+            }
         }
     }
 

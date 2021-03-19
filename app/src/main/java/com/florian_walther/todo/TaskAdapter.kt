@@ -8,9 +8,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.florian_walther.todo.databinding.ItemTaskBinding
 
-class TaskAdapter(
-    private val listener: OnItemClickListener
-    ): ListAdapter<Task, TaskAdapter.ViewHolder>(DiffCallback()) {
+class TaskAdapter(private val listener: OnItemClickListener): ListAdapter<Task, TaskAdapter.ViewHolder>(DiffCallback()) {
 
     inner class ViewHolder(private val binding: ItemTaskBinding): RecyclerView.ViewHolder(binding.root) {
 
