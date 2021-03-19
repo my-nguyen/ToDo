@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickListener {
     private val viewModel: TaskViewModel by viewModels()
+    private lateinit var searchView: SearchView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -121,7 +122,19 @@ class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickL
         inflater.inflate(R.menu.menu_fragment_tasks, menu)
 
         val searchItem = menu.findItem(R.id.action_search)
-        val searchView = searchItem.actionView as SearchView
+        searchView = searchItem.actionView as SearchView
+
+        // fix for a bug where after entering a query thereby executing it, the screen is rotated:
+        // the searchView is contracted and the title shows instead
+        // retrieve the current query from ViewModel if any
+        val pendingQuery = viewModel.query.value
+        if (pendingQuery != null && pendingQuery.isNotEmpty()) {
+            // expand the magnifying glass
+            searchItem.expandActionView()
+            // restore the query string
+            searchView.setQuery(pendingQuery, false)
+        }
+
         searchView.onQueryTextChanged { text ->
             // update viewModel.query here
             viewModel.query.value = text
@@ -160,5 +173,11 @@ class TasksFragment: Fragment(R.layout.fragment_tasks), TaskAdapter.OnItemClickL
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // remove the listener from searchView
+        searchView.setOnQueryTextListener(null)
     }
 }
