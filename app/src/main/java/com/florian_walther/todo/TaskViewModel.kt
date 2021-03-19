@@ -101,9 +101,21 @@ class TaskViewModel @ViewModelInject constructor(
         taskChannel.send(TaskEvent.NavigateToAdd)
     }
 
+    fun onEditResult(result: Int) {
+        when (result) {
+            ADD_TASK_RESULT_OK -> showTaskSaved("Task added")
+            EDIT_TASK_RESULT_OK -> showTaskSaved("Task updated")
+        }
+    }
+
+    private fun showTaskSaved(text: String) = viewModelScope.launch {
+        taskChannel.send(TaskEvent.ShowTaskSavedMessage(text))
+    }
+
     sealed class TaskEvent {
         object NavigateToAdd : TaskEvent()
         data class NavigateToEdit(val task: Task): TaskEvent()
         data class ShowUndoMessage(val task: Task): TaskEvent()
+        data class ShowTaskSavedMessage(val message: String): TaskEvent()
     }
 }

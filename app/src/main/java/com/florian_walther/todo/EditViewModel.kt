@@ -4,6 +4,10 @@ import androidx.hilt.Assisted
 import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 
 // SavedStateHandle is like a Bundle in Activity.onCreate() or Activity.recreate() where we can
 // restore data after a process death.
@@ -31,4 +35,46 @@ class EditViewModel @ViewModelInject constructor(
             field = value
             state.set("taskImportance", value)
         }
+
+    // channel to emit events to Fragment
+    private val editChannel = Channel<EditEvent>()
+    // turn channel to Flow to avoid exposure of channel
+    val editEvent = editChannel.receiveAsFlow()
+
+    fun onSaveClick() {
+        when {
+            taskName.isBlank() -> {
+                showInvalidInput("Name cannot be empty")
+            }
+            task != null -> {
+                val updatedTask = task.copy(name=taskName, is_important=taskImportance)
+                updateTask(updatedTask)
+            }
+            else -> {
+                val newTask = Task(name=taskName, is_important=taskImportance)
+                createTask(newTask)
+            }
+        }
+    }
+
+    private fun createTask(task: Task) = viewModelScope.launch {
+        taskDao.insert(task)
+        // navigate back
+        editChannel.send(EditEvent.NavigateBack(ADD_TASK_RESULT_OK))
+    }
+
+    private fun updateTask(task: Task) = viewModelScope.launch {
+        taskDao.update(task)
+        // navigate back
+        editChannel.send(EditEvent.NavigateBack(EDIT_TASK_RESULT_OK))
+    }
+
+    private fun showInvalidInput(text: String) = viewModelScope.launch {
+        editChannel.send(EditEvent.ShowInvalidInput(text))
+    }
+
+    sealed class EditEvent {
+        data class ShowInvalidInput(val message: String): EditEvent()
+        data class NavigateBack(val result: Int): EditEvent()
+    }
 }
