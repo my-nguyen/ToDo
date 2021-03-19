@@ -108,6 +108,10 @@ class TaskViewModel @ViewModelInject constructor(
         }
     }
 
+    fun onDeleteCompletedClick() = viewModelScope.launch {
+        taskChannel.send(TaskEvent.NavigateToDeleteCompleted)
+    }
+
     private fun showTaskSaved(text: String) = viewModelScope.launch {
         taskChannel.send(TaskEvent.ShowTaskSavedMessage(text))
     }
@@ -117,5 +121,6 @@ class TaskViewModel @ViewModelInject constructor(
         data class NavigateToEdit(val task: Task): TaskEvent()
         data class ShowUndoMessage(val task: Task): TaskEvent()
         data class ShowTaskSavedMessage(val message: String): TaskEvent()
+        object NavigateToDeleteCompleted : TaskEvent()
     }
 }

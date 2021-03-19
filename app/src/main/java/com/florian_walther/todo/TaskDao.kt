@@ -5,8 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    /*@Query("SELECT * FROM tasks WHERE name LIKE '%' || :query || '%' ORDER BY is_important DESC")
-    fun getTasks(query: String): Flow<List<Task>>*/
+    @Query("SELECT * FROM tasks WHERE name LIKE '%' || :query || '%' ORDER BY is_important DESC")
+    fun getTasks(query: String): Flow<List<Task>>
 
     fun getTasks(query: String, sortOrder: SortOrder, hideCompleted: Boolean): Flow<List<Task>> =
         when (sortOrder) {
@@ -28,4 +28,7 @@ interface TaskDao {
 
     @Delete
     suspend fun delete(task: Task)
+
+    @Query("DELETE FROM tasks WHERE is_completed=1")
+    suspend fun deleteCompleted()
 }
